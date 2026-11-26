@@ -1,0 +1,43 @@
+
+name: Build H2 iPod Rockbox
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git perl zip unzip wget flex bison texinfo
+
+      - name: Build MIPS toolchain
+        run: |
+          RBDEV_PREFIX="$HOME/rockbox-toolchain" RBDEV_TARGET=i tools/rockboxdev.sh
+          echo "$HOME/rockbox-toolchain/bin" >> "$GITHUB_PATH"
+
+      - name: Compile H2 firmware
+        run: |
+          mkdir build
+          cd build
+          ../tools/configure --target=erosqnative --type=n
+          make -j2
+          make zip
+
+      - name: Upload firmware ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: H2-iPod-Rockbox
+          path: build/rockbox.zip
+          if-no-files-found: error
